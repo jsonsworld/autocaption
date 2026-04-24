@@ -159,27 +159,34 @@
                         </div>
                     `;
                     audioClipsContainer.prepend(audioClip);
+                    const audioElement = audioClip.querySelector("audio");
                     
                     try {
-                        const blob = new Blob(chunks, { type: "audio/mp3; codecs=opus" });
+                        const blobType = chunks[0]?.type || "audio/webm";
+                        const blob = new Blob(chunks, { type: blobType });
+                        audioElement.src = URL.createObjectURL(blob);
+
                         const data = new FormData();
-                        data.append("audio", blob);
+                        data.append("audio", blob, "recording.webm");
                         
-                        const res = await axios.post("http://localhost:8888/upload", data);
-                        const audioElement = audioClip.querySelector("audio");
-                        audioElement.src = res.data.link;
+                        const res = await axios.post("/upload", data);
                         
                         const originalTextDiv = audioClip.querySelector("#original-text");
                         const translatedTextDiv = audioClip.querySelector("#translated-text");
                         
                         originalTextDiv.textContent = res.data.text;
                         
-                        const translationRes = await axios.post("http://localhost:8888/translate", {
+                        const translationRes = await axios.post("/translate", {
                             text: res.data.text,
                             targetLang: targetLanguageSelect.value
                         });
                         
-                        translatedTextDiv.textContent = translationRes.data.translatedText;
+                        if (translationRes.data.translatedText) {
+                            translatedTextDiv.textContent = translationRes.data.translatedText;
+                        } else {
+                            translatedTextDiv.textContent = "Translation failed";
+                            console.error("Translation response:", translationRes.data);
+                        }
                         audioClip.querySelector(".text-gray-500").textContent = "Ready to play";
                     } catch (error) {
                         console.error("Error:", error);
